@@ -1,7 +1,9 @@
 package com.etake.turnoverplan.config;
 
+import com.etake.turnoverplan.service.ExcelService;
 import com.etake.turnoverplan.service.StoreCategoryService;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.job.builder.JobBuilder;
@@ -13,6 +15,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 
+import static com.etake.turnoverplan.utils.TestData.getTestSales;
+
 @Component
 @RequiredArgsConstructor
 public class BatchJobConfig {
@@ -20,20 +24,33 @@ public class BatchJobConfig {
     private final PlatformTransactionManager platformTransactionManager;
 
     private final StoreCategoryService storeCategoryService;
+    private final ExcelService excelService;
 
     @Bean
     public Job job() {
         return new JobBuilder("turnoverPlanJob", jobRepository)
-                .start(testStep())
+//                .start(testStep())
+                .start(writeStep())
                 .incrementer(new RunIdIncrementer())
                 .build();
     }
 
+//    @Bean
+//    public Step testStep() {
+//        return new StepBuilder("testStep", jobRepository)
+//                .tasklet((contribution, chunkContext) -> {
+//                    storeCategoryService.getSales(2024, 9);
+//                    return RepeatStatus.FINISHED;
+//                }, platformTransactionManager)
+//                .build();
+//    }
+
     @Bean
-    public Step testStep() {
-        return new StepBuilder("testStep", jobRepository)
+    public Step writeStep() {
+        return new StepBuilder("writeStep", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
-                    storeCategoryService.getSales(2024, 9);
+                    final Workbook workbook = excelService.getWorkbook(getTestSales());
+                    excelService.writeWorkbook(workbook, "some path");
                     return RepeatStatus.FINISHED;
                 }, platformTransactionManager)
                 .build();

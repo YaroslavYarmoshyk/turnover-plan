@@ -5,6 +5,7 @@ import com.etake.turnoverplan.model.StoreCategory;
 import com.etake.turnoverplan.model.StoreCategorySales;
 import com.etake.turnoverplan.repository.PositionRepository;
 import com.etake.turnoverplan.repository.StoreCategoryRepository;
+import com.etake.turnoverplan.service.PeriodProvider;
 import com.etake.turnoverplan.service.StoreCategoryService;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.util.Strings;
@@ -20,8 +21,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
+import static com.etake.turnoverplan.service.PeriodProvider.getYearMonth;
 import static com.etake.turnoverplan.utils.CalculationUtils.DEFAULT_ROUNDING_MODE;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
@@ -32,16 +33,17 @@ import static java.util.stream.Collectors.toSet;
 public class StoreCategoryServiceImpl implements StoreCategoryService {
     private final StoreCategoryRepository storeCategoryRepository;
     private final PositionRepository positionRepository;
+    private final PeriodProvider periodProvider;
 
     @Override
     public List<StoreCategorySales> getSales(final Integer year, final Integer month) {
         final YearMonth currentPeriodCurrentMonth = YearMonth.of(year, month);
-        final YearMonth currentPeriodPrevMonth = getPrevPeriodYearMonth(currentPeriodCurrentMonth, 0, -1);
-        final YearMonth prevPeriodPrevMonth = getPrevPeriodYearMonth(currentPeriodCurrentMonth, -1, -1);
-        final YearMonth prevPeriodCurrentMonth = getPrevPeriodYearMonth(currentPeriodCurrentMonth, -1, 0);
-        final YearMonth prevPeriodFirstMonth = getPrevPeriodYearMonth(currentPeriodCurrentMonth, -1, 1);
-        final YearMonth prevPeriodSecondMonth = getPrevPeriodYearMonth(currentPeriodCurrentMonth, -1, 2);
-        final YearMonth prevPeriodThirdMonth = getPrevPeriodYearMonth(currentPeriodCurrentMonth, -1, 3);
+        final YearMonth currentPeriodPrevMonth = getYearMonth(currentPeriodCurrentMonth, 0, -1);
+        final YearMonth prevPeriodPrevMonth = getYearMonth(currentPeriodCurrentMonth, -1, -1);
+        final YearMonth prevPeriodCurrentMonth = getYearMonth(currentPeriodCurrentMonth, -1, 0);
+        final YearMonth prevPeriodFirstMonth = getYearMonth(currentPeriodCurrentMonth, -1, 1);
+        final YearMonth prevPeriodSecondMonth = getYearMonth(currentPeriodCurrentMonth, -1, 2);
+        final YearMonth prevPeriodThirdMonth = getYearMonth(currentPeriodCurrentMonth, -1, 3);
 
         final Map<String, Position> currentPeriodPrevMonthPositions = getPositionsByKey(currentPeriodPrevMonth);
         final Map<String, Position> currentPeriodCurrentMonthPositions = getPositionsByKey(currentPeriodCurrentMonth);
@@ -106,7 +108,7 @@ public class StoreCategoryServiceImpl implements StoreCategoryService {
 
                             .build();
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         return List.of();
     }
@@ -155,13 +157,7 @@ public class StoreCategoryServiceImpl implements StoreCategoryService {
     private static Map<String, Position> getFilteredByRegionCategoryPositions(final Collection<StoreCategory> storeCategories,
                                                                               final Map<String, Position> positions) {
         final String categoryName = storeCategories.stream()
-//                .map(StoreCategory::categoryName)
-                .map(s -> {
-                    if (s.categoryName() == null) {
-                        String stop = "s";
-                    }
-                    return s.categoryName();
-                })
+                .map(StoreCategory::categoryName)
                 .findFirst()
                 .orElseThrow();
         final Set<String> storesInRegion = storeCategories.stream()
@@ -200,12 +196,6 @@ public class StoreCategoryServiceImpl implements StoreCategoryService {
                         Position::getKey,
                         Function.identity()
                 ));
-    }
-
-    private static YearMonth getPrevPeriodYearMonth(final YearMonth currentYearMonth,
-                                                    final Integer yearOffset,
-                                                    final Integer monthOffset) {
-        return currentYearMonth.plusYears(yearOffset).plusMonths(monthOffset);
     }
 
     private static LocalDate getStartDate(final YearMonth yearMonth) {
