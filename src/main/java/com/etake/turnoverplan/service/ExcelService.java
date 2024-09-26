@@ -9,5 +9,5 @@ public interface ExcelService {
 
     Workbook getWorkbook(final Collection<StoreCategorySales> sales);
 
-    void writeWorkbook(final Workbook workbook, final String path);
+    void writeWorkbook(final Workbook workbook, final String path) throws Exception;
 }

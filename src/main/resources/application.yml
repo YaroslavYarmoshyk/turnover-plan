@@ -13,5 +13,6 @@ spring:
 #      path: /h2-console
 
 system-configuration:
-  year: 2024
-  month: 9
+  planned-year: 2024
+  planned-month: 10
+  file-path: C:\\Users\\Ya.Yarmoshyk\\Desktop\\

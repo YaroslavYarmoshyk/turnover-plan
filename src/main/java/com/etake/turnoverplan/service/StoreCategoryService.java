@@ -6,5 +6,5 @@ import java.util.List;
 
 public interface StoreCategoryService {
 
-    List<StoreCategorySales> getSales(final Integer year, final Integer month);
+    List<StoreCategorySales> getSales();
 }

@@ -1,5 +1,6 @@
 package com.etake.turnoverplan.config;
 
+import com.etake.turnoverplan.config.properties.SystemConfigurationProperties;
 import com.etake.turnoverplan.service.ExcelService;
 import com.etake.turnoverplan.service.StoreCategoryService;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +16,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 
-import static com.etake.turnoverplan.utils.TestData.getTestSales;
-
 @Component
 @RequiredArgsConstructor
 public class BatchJobConfig {
@@ -25,6 +24,8 @@ public class BatchJobConfig {
 
     private final StoreCategoryService storeCategoryService;
     private final ExcelService excelService;
+
+    private final SystemConfigurationProperties systemConfigurationProperties;
 
     @Bean
     public Job job() {
@@ -49,8 +50,9 @@ public class BatchJobConfig {
     public Step writeStep() {
         return new StepBuilder("writeStep", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
-                    final Workbook workbook = excelService.getWorkbook(getTestSales());
-                    excelService.writeWorkbook(workbook, "some path");
+                    final Workbook workbook = excelService.getWorkbook(storeCategoryService.getSales());
+//                    final Workbook workbook = excelService.getWorkbook(getTestSales());
+                    excelService.writeWorkbook(workbook, systemConfigurationProperties.filePath() + "test.xlsx");
                     return RepeatStatus.FINISHED;
                 }, platformTransactionManager)
                 .build();

@@ -8,22 +8,23 @@ import com.etake.turnoverplan.repository.StoreCategoryRepository;
 import com.etake.turnoverplan.service.PeriodProvider;
 import com.etake.turnoverplan.service.StoreCategoryService;
 import lombok.RequiredArgsConstructor;
-import org.apache.logging.log4j.util.Strings;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.TemporalAdjusters;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
 import static com.etake.turnoverplan.service.PeriodProvider.getYearMonth;
 import static com.etake.turnoverplan.utils.CalculationUtils.DEFAULT_ROUNDING_MODE;
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
@@ -36,8 +37,8 @@ public class StoreCategoryServiceImpl implements StoreCategoryService {
     private final PeriodProvider periodProvider;
 
     @Override
-    public List<StoreCategorySales> getSales(final Integer year, final Integer month) {
-        final YearMonth currentPeriodCurrentMonth = YearMonth.of(year, month);
+    public List<StoreCategorySales> getSales() {
+        final YearMonth currentPeriodCurrentMonth = periodProvider.getCurrentYearMonth();
         final YearMonth currentPeriodPrevMonth = getYearMonth(currentPeriodCurrentMonth, 0, -1);
         final YearMonth prevPeriodPrevMonth = getYearMonth(currentPeriodCurrentMonth, -1, -1);
         final YearMonth prevPeriodCurrentMonth = getYearMonth(currentPeriodCurrentMonth, -1, 0);
@@ -52,35 +53,26 @@ public class StoreCategoryServiceImpl implements StoreCategoryService {
         final Map<String, Position> prevPeriodSecondMonthPositions = getPositionsByKey(prevPeriodSecondMonth);
         final Map<String, Position> prevPeriodThirdMonthPositions = getPositionsByKey(prevPeriodThirdMonth);
 
-        final List<String> lflStores = getPositionsByKey(prevPeriodPrevMonth).values().stream()
+        final Set<String> lflStores = getPositionsByKey(prevPeriodPrevMonth).values().stream()
                 .map(Position::storeName)
-                .toList();
+                .collect(toSet());
 
         final List<StoreCategory> activeStoreCategories = storeCategoryRepository.getActiveStoreCategoryPairs();
-        final Map<String, Map<String, Set<StoreCategory>>> activeStoreCategoriesByRegion = activeStoreCategories.stream()
-                .collect(groupingBy(
-                        StoreCategory::regionName,
-                        groupingBy(
-                                StoreCategory::categoryName,
-                                toSet()
-                        )
-                ));
+        final Map<String, String> similarStoreCategories = getSimilarStoreCategories(
+                activeStoreCategories,
+                lflStores,
+                currentPeriodPrevMonthPositions,
+                currentPeriodCurrentMonthPositions
+        );
 
-        final List<StoreCategorySales> storeCategorySales = activeStoreCategories.stream()
+        return activeStoreCategories.stream()
                 .map(storeCategory -> {
                     final String regionName = storeCategory.regionName();
                     final String storeName = storeCategory.storeName();
-                    final String categoryName = storeCategory.categoryName();
                     final String key = storeCategory.getKey();
                     final boolean isLfl = lflStores.contains(storeName);
+                    final String similarStoreName = isLfl ? storeName : similarStoreCategories.get(storeCategory.getKey());
 
-                    final Set<StoreCategory> storeCategoriesInRegion = activeStoreCategoriesByRegion.get(regionName).get(categoryName);
-                    final String similarStoreName = isLfl ? storeName : resolveSimilarStore(
-                            storeCategory,
-                            storeCategoriesInRegion,
-                            getFilteredByRegionCategoryPositions(storeCategoriesInRegion, currentPeriodPrevMonthPositions),
-                            getFilteredByRegionCategoryPositions(storeCategoriesInRegion, currentPeriodCurrentMonthPositions)
-                    );
                     return StoreCategorySales.builder()
                             .regionName(regionName)
                             .storeName(storeName)
@@ -109,75 +101,72 @@ public class StoreCategoryServiceImpl implements StoreCategoryService {
                             .build();
                 })
                 .toList();
-
-        return List.of();
     }
 
-    private String resolveSimilarStore(final StoreCategory storeCategory,
-                                       final Set<StoreCategory> storeCategories,
-                                       final Map<String, Position> currentPeriodPrevMonthPositions,
-                                       final Map<String, Position> currentPeriodCurrentMonthPositions) {
-        final Map<String, BigDecimal> growth = currentPeriodCurrentMonthPositions.entrySet().stream()
-                .collect(toMap(
-                                Map.Entry::getKey,
-                                entry -> {
-                                    final BigDecimal currentTurnover = entry.getValue().turnover();
-                                    final BigDecimal prevTurnover = currentPeriodPrevMonthPositions.getOrDefault(entry.getKey(), Position.empty()).turnover();
-//                                    If new store, return zero growth
-                                    if (currentTurnover == null || prevTurnover == null) {
-                                        return BigDecimal.ZERO;
-                                    }
-                                    return currentTurnover
-                                            .divide(prevTurnover, DEFAULT_ROUNDING_MODE).subtract(BigDecimal.ONE);
-                                }
+    private static Map<String, String> getSimilarStoreCategories(final List<StoreCategory> activeStoreCategories,
+                                                                 final Set<String> lflStores,
+                                                                 final Map<String, Position> currentPeriodPrevMonthPositions,
+                                                                 final Map<String, Position> currentPeriodCurrentMonthPositions) {
+//        Collect by region and category to get only stores from current region for growth comparison
+        final Map<String, Map<String, Map<String, BigDecimal>>> growthPerRegionCategory = currentPeriodCurrentMonthPositions.values().stream()
+                .collect(groupingBy(
+                        Position::regionName,
+                        groupingBy(
+                                Position::categoryName,
+                                toMap(
+                                        Position::getKey,
+                                        entry -> getGrowth(entry.turnover(), currentPeriodPrevMonthPositions.getOrDefault(entry.getKey(), Position.empty()).turnover())
+                                )
                         )
-                );
-        final String currentStoreName = storeCategory.storeName();
+                ));
+        return activeStoreCategories.stream()
+                .collect(toMap(
+                        StoreCategory::getKey,
+                        storeCategory -> getClosestStoreByGrowth(
+                                storeCategory,
+                                lflStores,
+                                growthPerRegionCategory.get(storeCategory.regionName()).getOrDefault(storeCategory.categoryName(), Map.of())
+                        )
+                ));
+    }
+
+    private static BigDecimal getGrowth(final BigDecimal currentMonthAvgTurnover,
+                                        final BigDecimal prevMonthAvgTurnover) {
+        if (currentMonthAvgTurnover != null && prevMonthAvgTurnover != null) {
+            return currentMonthAvgTurnover
+                    .divide(prevMonthAvgTurnover, DEFAULT_ROUNDING_MODE).subtract(BigDecimal.ONE);
+        }
+        return BigDecimal.ZERO;
+    }
+
+    private static String getClosestStoreByGrowth(final StoreCategory storeCategory,
+                                                  final Set<String> lflStores,
+                                                  final Map<String, BigDecimal> growth) {
+        final String currentStore = storeCategory.storeName();
         final String currentStoreCategoryKey = storeCategory.getKey();
         final BigDecimal currentStoreCategoryGrowth = growth.get(currentStoreCategoryKey);
-//        If a category is not present on store, return the same stores as similar one
-        if (currentStoreCategoryGrowth == null) {
-            return currentStoreName;
+        if (isNull(currentStoreCategoryGrowth)) {
+            return currentStore;
         }
         final Map<String, BigDecimal> growthExcludingCurrentStoreCategory = growth.entrySet().stream()
                 .filter(entry -> !Objects.equals(entry.getKey(), currentStoreCategoryKey))
                 .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
-        final String similarStoreCategoryKey = getClosestStoreCategoryKey(currentStoreCategoryGrowth, growthExcludingCurrentStoreCategory);
-        if (Strings.isEmpty(similarStoreCategoryKey)) {
-            return currentStoreName;
-        }
-
-        return storeCategories.stream()
-                .filter(sC -> Objects.equals(sC.getKey(), similarStoreCategoryKey))
-                .findFirst()
-                .map(StoreCategory::storeName)
-                .orElseThrow();
-    }
-
-    private static Map<String, Position> getFilteredByRegionCategoryPositions(final Collection<StoreCategory> storeCategories,
-                                                                              final Map<String, Position> positions) {
-        final String categoryName = storeCategories.stream()
-                .map(StoreCategory::categoryName)
-                .findFirst()
-                .orElseThrow();
-        final Set<String> storesInRegion = storeCategories.stream()
-                .map(StoreCategory::storeName)
-                .collect(toSet());
-        return positions.entrySet().stream()
-                .filter(entry -> Objects.equals(entry.getValue().categoryName(), categoryName) && storesInRegion.contains(entry.getValue().storeName()))
-                .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-    private static String getClosestStoreCategoryKey(final BigDecimal target, final Map<String, BigDecimal> growth) {
-        return growth.entrySet().stream()
-                .filter(entry -> entry.getValue() != null)  // Filter out entries with null values
+        return growthExcludingCurrentStoreCategory.entrySet().stream()
+                .filter(entry -> nonNull(entry.getValue()))
+                .filter(entry -> lflStores.contains(resolveStoreNameFromStoreCategoryKey(entry.getKey())))// Filter out entries with null values
                 .min((entry1, entry2) -> {
-                    BigDecimal diff1 = entry1.getValue().subtract(target).abs();
-                    BigDecimal diff2 = entry2.getValue().subtract(target).abs();
+                    BigDecimal diff1 = entry1.getValue().subtract(currentStoreCategoryGrowth).abs();
+                    BigDecimal diff2 = entry2.getValue().subtract(currentStoreCategoryGrowth).abs();
                     return diff1.compareTo(diff2);  // Compare the absolute differences
                 })
-                .map(Map.Entry::getKey)
-                .orElse(Strings.EMPTY);
+                .map(entry -> resolveStoreNameFromStoreCategoryKey(entry.getKey()))
+                .orElse(currentStore);
+    }
+
+    private static String resolveStoreNameFromStoreCategoryKey(final String key) {
+        return Optional.ofNullable(key)
+                .map(k -> k.substring(0, k.indexOf("_0")))
+                .orElseThrow();
     }
 
     private <T> T getValueByKey(final String key,

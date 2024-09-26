@@ -4,5 +4,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 
 @ConfigurationProperties(prefix = "system-configuration")
-public record SystemConfigurationProperties(Integer year, Integer month) {
+public record SystemConfigurationProperties(
+        Integer plannedYear,
+        Integer plannedMonth,
+        String filePath
+) {
 }

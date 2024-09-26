@@ -3,6 +3,7 @@ package com.etake.turnoverplan.model;
 import java.math.BigDecimal;
 
 public record Position(
+        String regionName,
         String storeName,
         String categoryName,
         BigDecimal turnover,
@@ -10,7 +11,7 @@ public record Position(
         Integer salesDays
 ) {
     public static Position empty() {
-        return new Position(null, null, null, null, null);
+        return new Position(null, null, null, null, null, null);
     }
 
     public String getKey() {

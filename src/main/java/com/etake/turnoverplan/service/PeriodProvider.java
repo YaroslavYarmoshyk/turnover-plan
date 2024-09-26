@@ -6,11 +6,19 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 
 @Component
 @RequiredArgsConstructor
 public class PeriodProvider {
     private final SystemConfigurationProperties systemConfigurationProperties;
+
+    public YearMonth getCurrentYearMonth() {
+        return YearMonth.of(
+                systemConfigurationProperties.plannedYear(),
+                systemConfigurationProperties.plannedMonth()
+        ).minusMonths(1);
+    }
 
     public static YearMonth getYearMonth(final YearMonth yearMonth,
                                          final Integer yearOffset,
@@ -36,26 +44,25 @@ public class PeriodProvider {
     }
 
     private String getOffsetMontYearName(final Integer yearOffset, final Integer monthOffset) {
-        final YearMonth currentYearMonth = YearMonth.of(systemConfigurationProperties.year(), systemConfigurationProperties.month());
-        final YearMonth yearMonth = currentYearMonth.plusYears(yearOffset).plusMonths(monthOffset);
+        final YearMonth yearMonth = getCurrentYearMonth().plusYears(yearOffset).plusMonths(monthOffset);
 
-        return String.format("%s - %s", getMonthPart(yearMonth.getMonthValue()), yearMonth.getYear());
+        return String.format("%s - %s", getMonthPart(yearMonth.getMonthValue()), yearMonth.format(DateTimeFormatter.ofPattern("yy")));
     }
 
     private static String getMonthPart(final Integer month) {
         return switch (month) {
-            case 1 -> "Січ";
-            case 2 -> "Лют";
-            case 3 -> "Бер";
-            case 4 -> "Кві";
-            case 5 -> "Тра";
-            case 6 -> "Чер";
-            case 7 -> "Лип";
-            case 8 -> "Сер";
-            case 9 -> "Вер";
-            case 10 -> "Жов";
-            case 11 -> "Лис";
-            case 12 -> "Гру";
+            case 1 -> "січ";
+            case 2 -> "лют";
+            case 3 -> "бер";
+            case 4 -> "кві";
+            case 5 -> "тра";
+            case 6 -> "чер";
+            case 7 -> "лип";
+            case 8 -> "сер";
+            case 9 -> "вер";
+            case 10 -> "жов";
+            case 11 -> "лис";
+            case 12 -> "гру";
             default -> throw new IllegalStateException("Cannot resolve month name");
         };
     }

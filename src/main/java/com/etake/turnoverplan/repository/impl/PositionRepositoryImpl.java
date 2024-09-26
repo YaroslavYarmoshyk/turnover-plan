@@ -26,6 +26,7 @@ public class PositionRepositoryImpl implements PositionRepository {
     private static String getFindAllByYearMonthSqlQuery() {
         return """
                 SELECT
+                    grouped.region_name,
                     grouped.store_name,
                     grouped.category_name,
                     AVG(turnover) AS turnover,
@@ -34,12 +35,14 @@ public class PositionRepositoryImpl implements PositionRepository {
                 FROM (
                     SELECT
                         s.date AS date,
+                        r.name as region_name,
                         st.name AS store_name,
                         cc.category_name,
                         SUM(s.discounted_sales) AS turnover,
                         SUM(s.margin) AS margin
                     FROM
                         stores st
+                        LEFT JOIN regions r ON r.id = st.region_id
                         LEFT JOIN sales s ON st.id = s.store_id
                         LEFT JOIN products p ON p.id = s.product_id
                         LEFT JOIN category_classification cc ON cc.third_subcategory_id = p.subcategory_id_3
@@ -48,10 +51,12 @@ public class PositionRepositoryImpl implements PositionRepository {
                         AND st.active = 1
                     GROUP BY
                         s.date,
+                        r.name,
                         st.name,
                         cc.category_name
                 ) AS grouped
                 GROUP BY
+                    region_name,
                     store_name,
                     category_name;
                 """;
