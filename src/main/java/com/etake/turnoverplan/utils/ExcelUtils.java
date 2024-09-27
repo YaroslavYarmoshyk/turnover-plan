@@ -12,10 +12,35 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 
+import java.math.BigDecimal;
+
 import static java.util.Objects.nonNull;
 
 @NoArgsConstructor(access = AccessLevel.NONE)
 public final class ExcelUtils {
+
+    public static <T> void setValue(final Row row, final int col, final T value) {
+        final Cell cell = row.getCell(col);
+        if (nonNull(value)) {
+            if (value instanceof Number number) {
+                final BigDecimal bigDecimal = BigDecimal.valueOf(number.doubleValue());
+                if (bigDecimal.compareTo(BigDecimal.ZERO) > 0) {
+                    cell.setCellValue(bigDecimal.doubleValue());
+                }
+            } else {
+                cell.setCellValue(value.toString());
+            }
+        }
+    }
+
+    public static void createCells(final Sheet sheet, final int endRow, final int endCol) {
+        for (int i = 0; i <= endRow; i++) {
+            final Row row = sheet.createRow(i);
+            for (int j = 0; j <= endCol; j++) {
+                row.createCell(j);
+            }
+        }
+    }
 
     public static void applyCellStyle(final Sheet sheet,
                                       final CellStyle cellStyle,

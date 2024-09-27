@@ -16,6 +16,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 
+import static com.etake.turnoverplan.utils.TestData.getTestSales;
+
 @Component
 @RequiredArgsConstructor
 public class BatchJobConfig {
@@ -50,8 +52,8 @@ public class BatchJobConfig {
     public Step writeStep() {
         return new StepBuilder("writeStep", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
-                    final Workbook workbook = excelService.getWorkbook(storeCategoryService.getSales());
-//                    final Workbook workbook = excelService.getWorkbook(getTestSales());
+//                    final Workbook workbook = excelService.getWorkbook(storeCategoryService.getSales());
+                    final Workbook workbook = excelService.getWorkbook(getTestSales());
                     excelService.writeWorkbook(workbook, systemConfigurationProperties.filePath() + "test.xlsx");
                     return RepeatStatus.FINISHED;
                 }, platformTransactionManager)
