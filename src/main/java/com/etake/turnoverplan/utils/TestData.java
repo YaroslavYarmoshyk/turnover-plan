@@ -1,11 +1,13 @@
 package com.etake.turnoverplan.utils;
 
+import com.etake.turnoverplan.model.RegionOrder;
 import com.etake.turnoverplan.model.StoreCategorySales;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -162,5 +164,9 @@ public final class TestData {
         }
 
         return storeCategorySalesList;
+    }
+
+    public static Collection<RegionOrder> getRegionOrders() {
+        return List.of(new RegionOrder(1, "Region1"), new RegionOrder(2, "Region2"), new RegionOrder(3, "Region3"));
     }
 }
