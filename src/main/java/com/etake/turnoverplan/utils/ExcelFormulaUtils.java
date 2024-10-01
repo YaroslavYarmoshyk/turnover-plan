@@ -59,21 +59,24 @@ public final class ExcelFormulaUtils {
         return "%s*%s".formatted(getCurrentRowRangeByColumnIndex(avgPlanColumnIndex), daysFormulaPart);
     }
 
-    public static String getCategoriesPlanFormula(final Integer dataSheetSumColumnIndex,
-                                                  final Integer dataSheetCategoryColumnIndex,
-                                                  final Integer categoryCriteriaColumnIndex) {
+    public static String getPlanSumFormula(final Integer dataSheetSumColumnIndex,
+                                           final Integer dataSheetCriteriaColumnIndex,
+                                           final Integer criteriaColumnIndex) {
         final String criteriaRange = "%s!%s".formatted(DATA_SHEET_NAME, getFullRangeByColumnIndex(dataSheetSumColumnIndex));
-        final String criteria = getCurrentRowRangeByColumnIndex(categoryCriteriaColumnIndex);
-        final String sumRange = "%s!%s".formatted(DATA_SHEET_NAME, getFullRangeByColumnIndex(dataSheetCategoryColumnIndex));
+        final String criteria = getCurrentRowRangeByColumnIndex(criteriaColumnIndex);
+        final String sumRange = "%s!%s".formatted(DATA_SHEET_NAME, getFullRangeByColumnIndex(dataSheetCriteriaColumnIndex));
         return "SUMIF(%s,%s,%s)".formatted(criteriaRange, criteria, sumRange);
     }
 
-    public static String getStoresPlanFormula(final String sumRange) {
-        return getPlanFormula("data!$A:$A", sumRange);
-    }
-
-    private static String getPlanFormula(final String conditionRange, final String sumRange) {
-        return "SUMIF(%s,INDIRECT(\"A\"&ROW()),data!%s)".formatted(conditionRange, sumRange);
+    public static String getAdjustedMarginStoresFormula(final Integer marginColumnIndex,
+                                                        final Integer turnoverColumnIndex,
+                                                        final Integer adjustedTurnoverColumnIndex) {
+        return "IF(%s=\"\",\"\",%s*(%s/%s))".formatted(
+                getCurrentRowRangeByColumnIndex(adjustedTurnoverColumnIndex),
+                getCurrentRowRangeByColumnIndex(adjustedTurnoverColumnIndex),
+                getCurrentRowRangeByColumnIndex(marginColumnIndex),
+                getCurrentRowRangeByColumnIndex(turnoverColumnIndex)
+        );
     }
 
     public static String getTotalSumPerRegionFormula(final int startRowIndex, final int endRowIndex) {

@@ -13,6 +13,7 @@ import com.etake.turnoverplan.repository.RegionRepository;
 import com.etake.turnoverplan.service.ExcelService;
 import com.etake.turnoverplan.service.PeriodProvider;
 import lombok.RequiredArgsConstructor;
+import org.apache.logging.log4j.util.Strings;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.Row;
@@ -43,12 +44,12 @@ import static com.etake.turnoverplan.utils.Constants.STORE;
 import static com.etake.turnoverplan.utils.Constants.STORES_SHEET_NAME;
 import static com.etake.turnoverplan.utils.Constants.TOTAL;
 import static com.etake.turnoverplan.utils.Constants.TURNOVER_COLUMN_NAME;
+import static com.etake.turnoverplan.utils.ExcelFormulaUtils.getAdjustedMarginStoresFormula;
 import static com.etake.turnoverplan.utils.ExcelFormulaUtils.getAvgPlanFormula;
-import static com.etake.turnoverplan.utils.ExcelFormulaUtils.getCategoriesPlanFormula;
 import static com.etake.turnoverplan.utils.ExcelFormulaUtils.getDataPlanFormula;
 import static com.etake.turnoverplan.utils.ExcelFormulaUtils.getDynFormula;
 import static com.etake.turnoverplan.utils.ExcelFormulaUtils.getOverallSumFormula;
-import static com.etake.turnoverplan.utils.ExcelFormulaUtils.getStoresPlanFormula;
+import static com.etake.turnoverplan.utils.ExcelFormulaUtils.getPlanSumFormula;
 import static com.etake.turnoverplan.utils.ExcelFormulaUtils.getTotalSumPerRegionFormula;
 import static com.etake.turnoverplan.utils.ExcelFormulaUtils.setFormula;
 import static com.etake.turnoverplan.utils.ExcelUtils.applyCellStyle;
@@ -309,12 +310,12 @@ public class ExcelServiceImpl implements ExcelService {
         final int dataSheetCategoryColumnIndex = dataIndices.category();
         final int categorySheetCategoryColumnIndex = categoryIndices.category();
 
-        final String firstMonthPlanTurnover = getCategoriesPlanFormula(dataSheetCategoryColumnIndex, dataIndices.planTurnoverFirstMonth(), categorySheetCategoryColumnIndex);
-        final String firstMonthPlanMargin = getCategoriesPlanFormula(dataSheetCategoryColumnIndex, dataIndices.planMarginFirstMonth(), categorySheetCategoryColumnIndex);
-        final String secondMonthPlanTurnover = getCategoriesPlanFormula(dataSheetCategoryColumnIndex, dataIndices.planTurnoverSecondMonth(), categorySheetCategoryColumnIndex);
-        final String secondMonthPlanMargin = getCategoriesPlanFormula(dataSheetCategoryColumnIndex, dataIndices.planMarginSecondMonth(), categorySheetCategoryColumnIndex);
-        final String thirdMonthPlanTurnover = getCategoriesPlanFormula(dataSheetCategoryColumnIndex, dataIndices.planTurnoverThirdMonth(), categorySheetCategoryColumnIndex);
-        final String thirdMonthPlanMargin = getCategoriesPlanFormula(dataSheetCategoryColumnIndex, dataIndices.planMarginThirdMonth(), categorySheetCategoryColumnIndex);
+        final String firstMonthPlanTurnover = getPlanSumFormula(dataSheetCategoryColumnIndex, dataIndices.planTurnoverFirstMonth(), categorySheetCategoryColumnIndex);
+        final String firstMonthPlanMargin = getPlanSumFormula(dataSheetCategoryColumnIndex, dataIndices.planMarginFirstMonth(), categorySheetCategoryColumnIndex);
+        final String secondMonthPlanTurnover = getPlanSumFormula(dataSheetCategoryColumnIndex, dataIndices.planTurnoverSecondMonth(), categorySheetCategoryColumnIndex);
+        final String secondMonthPlanMargin = getPlanSumFormula(dataSheetCategoryColumnIndex, dataIndices.planMarginSecondMonth(), categorySheetCategoryColumnIndex);
+        final String thirdMonthPlanTurnover = getPlanSumFormula(dataSheetCategoryColumnIndex, dataIndices.planTurnoverThirdMonth(), categorySheetCategoryColumnIndex);
+        final String thirdMonthPlanMargin = getPlanSumFormula(dataSheetCategoryColumnIndex, dataIndices.planMarginThirdMonth(), categorySheetCategoryColumnIndex);
 
         int startRow = INITIAL_VALUE_ROW_INDEX;
         for (final String category : categories) {
@@ -368,55 +369,9 @@ public class ExcelServiceImpl implements ExcelService {
         createResultHeaders(storesSheet, STORE, storesIndices, plannedQuarter);
         createAdjustedStoresPlanHeaders(storesSheet, storesIndices, plannedQuarter);
         populateStoresData(storesPerRegion, storesSheet, storesIndices);
-        populateStoresSheetFormulas(storesPerRegion, endRow, storesSheet);
+        populateStoresSheetFormulas(storesSheet, columnIndices, storesPerRegion, endRow);
 
         return storesSheet;
-    }
-
-    private static void populateStoresSheetFormulas(final Map<String, Set<String>> storesPerRegion, final int endRow, final Sheet storesSheet) {
-        final Map<String, RegionRowInfo> regionRowInfo = getRegionRowInfo(storesPerRegion);
-        int rowIndex = INITIAL_VALUE_ROW_INDEX;
-        int colIndex = 1;
-
-        for (int i = rowIndex; i <= endRow; i++) {
-            for (int j = colIndex; j <= 6; j++) {
-                final String formula = resolveStoresPlanFormula(storesSheet, i, getSumRange(j), regionRowInfo);
-                storesSheet.getRow(i).getCell(j).setCellFormula(formula);
-            }
-        }
-    }
-
-    private static String getSumRange(final Integer colIndex) {
-        return switch (colIndex) {
-            case 1 -> "AC:AC";
-            case 2 -> "AD:AD";
-            case 3 -> "AE:AE";
-            case 4 -> "AF:AF";
-            case 5 -> "AG:AG";
-            case 6 -> "AH:AH";
-            default -> throw new IllegalStateException();
-        };
-    }
-
-    private static Map<String, RegionRowInfo> getRegionRowInfo(final Map<String, Set<String>> storesPerRegion) {
-        int rowIndex = INITIAL_VALUE_ROW_INDEX;
-        final List<RegionRowInfo> regionRowInfo = new ArrayList<>();
-        for (final Map.Entry<String, Set<String>> entry : storesPerRegion.entrySet()) {
-            final int storesCountPerRegion = entry.getValue().size();
-            final RegionRowInfo regionRowData = new RegionRowInfo(
-                    entry.getKey(),
-                    rowIndex,
-                    rowIndex + 1,
-                    rowIndex + storesCountPerRegion
-            );
-            regionRowInfo.add(regionRowData);
-            rowIndex = rowIndex + storesCountPerRegion + 1;
-        }
-        return regionRowInfo.stream()
-                .collect(toMap(
-                        RegionRowInfo::regionName,
-                        Function.identity()
-                ));
     }
 
     private static void createAdjustedStoresPlanHeaders(final Sheet storesSheet,
@@ -445,9 +400,73 @@ public class ExcelServiceImpl implements ExcelService {
         storesSheet.getRow(rowIndex).getCell(storeColumnIndex).setCellValue(TOTAL);
     }
 
-    private static String resolveStoresPlanFormula(final Sheet sheet, final int currentRowIndex,
-                                                   final String defaultSumRange,
-                                                   final Map<String, RegionRowInfo> regionRowInfo) {
+    private static void populateStoresSheetFormulas(final Sheet storesSheet,
+                                                    final ColumnIndices columnIndices,
+                                                    final Map<String, Set<String>> storesPerRegion,
+                                                    final int endRow) {
+        final StoresSheetColumnIndices storesSheetColumnIndices = columnIndices.storesSheet();
+        final DataSheetColumnIndices dataSheetColumnIndices = columnIndices.dataSheet();
+        final int dataSheetStoreIndex = dataSheetColumnIndices.store();
+        final int storeSheetStoreIndex = storesSheetColumnIndices.store();
+        final Map<String, RegionRowInfo> regionRowInfo = getRegionRowInfo(storesPerRegion);
+
+        final String planTurnoverFirstMonthFormula = getPlanSumFormula(dataSheetStoreIndex, dataSheetColumnIndices.planTurnoverFirstMonth(), storeSheetStoreIndex);
+        final String planMarginFirstMonthFormula = getPlanSumFormula(dataSheetStoreIndex, dataSheetColumnIndices.planMarginFirstMonth(), storeSheetStoreIndex);
+        final String planTurnoverSecondMonthFormula = getPlanSumFormula(dataSheetStoreIndex, dataSheetColumnIndices.planTurnoverSecondMonth(), storeSheetStoreIndex);
+        final String planMarginSecondMonthFormula = getPlanSumFormula(dataSheetStoreIndex, dataSheetColumnIndices.planMarginSecondMonth(), storeSheetStoreIndex);
+        final String planTurnoverThirdMonthFormula = getPlanSumFormula(dataSheetStoreIndex, dataSheetColumnIndices.planTurnoverThirdMonth(), storeSheetStoreIndex);
+        final String planMarginThirdMonthFormula = getPlanSumFormula(dataSheetStoreIndex, dataSheetColumnIndices.planMarginThirdMonth(), storeSheetStoreIndex);
+        final String adjustedMarginFirstMonthFormula = getAdjustedMarginStoresFormula(storesSheetColumnIndices.planMarginFirstMonth(), storesSheetColumnIndices.planTurnoverFirstMonth(), storesSheetColumnIndices.adjustedPlanTurnoverFirstMonth());
+
+        int rowIndex = INITIAL_VALUE_ROW_INDEX;
+        for (int i = rowIndex; i <= endRow; i++) {
+            storesSheet.getRow(i).getCell(storesSheetColumnIndices.planTurnoverFirstMonth())
+                    .setCellFormula(resolveStoresFormula(storesSheet, i, regionRowInfo, planTurnoverFirstMonthFormula));
+            storesSheet.getRow(i).getCell(storesSheetColumnIndices.planMarginFirstMonth())
+                    .setCellFormula(resolveStoresFormula(storesSheet, i, regionRowInfo, planMarginFirstMonthFormula));
+            storesSheet.getRow(i).getCell(storesSheetColumnIndices.planTurnoverSecondMonth())
+                    .setCellFormula(resolveStoresFormula(storesSheet, i, regionRowInfo, planTurnoverSecondMonthFormula));
+            storesSheet.getRow(i).getCell(storesSheetColumnIndices.planMarginSecondMonth())
+                    .setCellFormula(resolveStoresFormula(storesSheet, i, regionRowInfo, planMarginSecondMonthFormula));
+            storesSheet.getRow(i).getCell(storesSheetColumnIndices.planTurnoverThirdMonth())
+                    .setCellFormula(resolveStoresFormula(storesSheet, i, regionRowInfo, planTurnoverThirdMonthFormula));
+            storesSheet.getRow(i).getCell(storesSheetColumnIndices.planMarginThirdMonth())
+                    .setCellFormula(resolveStoresFormula(storesSheet, i, regionRowInfo, planMarginThirdMonthFormula));
+
+            final String adjustedTurnoverPlanFormula = resolveStoresFormula(storesSheet, i, regionRowInfo, Strings.EMPTY);
+            if (!Strings.isEmpty(adjustedTurnoverPlanFormula)) {
+                storesSheet.getRow(i).getCell(storesSheetColumnIndices.adjustedPlanTurnoverFirstMonth())
+                        .setCellFormula(adjustedTurnoverPlanFormula);
+            }
+            storesSheet.getRow(i).getCell(storesSheetColumnIndices.adjustedPlanMarginFirstMonth())
+                    .setCellFormula(resolveStoresFormula(storesSheet, i, regionRowInfo, adjustedMarginFirstMonthFormula));
+        }
+    }
+
+    private static Map<String, RegionRowInfo> getRegionRowInfo(final Map<String, Set<String>> storesPerRegion) {
+        int rowIndex = INITIAL_VALUE_ROW_INDEX;
+        final List<RegionRowInfo> regionRowInfo = new ArrayList<>();
+        for (final Map.Entry<String, Set<String>> entry : storesPerRegion.entrySet()) {
+            final int storesCountPerRegion = entry.getValue().size();
+            final RegionRowInfo regionRowData = new RegionRowInfo(
+                    entry.getKey(),
+                    rowIndex,
+                    rowIndex + 1,
+                    rowIndex + storesCountPerRegion
+            );
+            regionRowInfo.add(regionRowData);
+            rowIndex = rowIndex + storesCountPerRegion + 1;
+        }
+        return regionRowInfo.stream()
+                .collect(toMap(
+                        RegionRowInfo::regionName,
+                        Function.identity()
+                ));
+    }
+
+    private static String resolveStoresFormula(final Sheet sheet, final int currentRowIndex,
+                                               final Map<String, RegionRowInfo> regionRowInfo,
+                                               final String defaultStoreFormula) {
         final String currentEntity = sheet.getRow(currentRowIndex).getCell(0).getStringCellValue();
         if (TOTAL.equals(currentEntity)) {
             return getOverallSumFormula(new ArrayList<>(regionRowInfo.values()));
@@ -456,7 +475,7 @@ public class ExcelServiceImpl implements ExcelService {
             final RegionRowInfo rowInfo = regionRowInfo.get(currentEntity);
             return getTotalSumPerRegionFormula(rowInfo.regionStoresStartRowIndex(), rowInfo.regionStoresEndRowIndex());
         }
-        return getStoresPlanFormula(defaultSumRange);
+        return defaultStoreFormula;
 
     }
 
