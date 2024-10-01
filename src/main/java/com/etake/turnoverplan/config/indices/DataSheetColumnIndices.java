@@ -37,26 +37,28 @@ public record DataSheetColumnIndices(
         int planMarginSecondMonth,
         int planTurnoverThirdMonth,
         int planMarginThirdMonth
-) {
+) implements ResultSheetColumnIndices {
+    @Override
     public Set<Integer> getTurnoverColumnIndices() {
         return Set.of(
-            avgTurnoverPrevPeriodActualMonth,
-            avgTurnoverPrevPeriodFirstMonth,
-            avgTurnoverPrevPeriodSecondMonth,
-            avgTurnoverPrevPeriodThirdMonth,
-            avgTurnoverCurrentPeriodActualMonth,
-            dynTurnoverFirstToActualMonth,
-            dynTurnoverSecondToFirstMonth,
-            dynTurnoverThirdToSecondMonth,
-            planAvgTurnoverFirstMonth,
-            planAvgTurnoverSecondMonth,
-            planAvgTurnoverThirdMonth,
-            planTurnoverFirstMonth,
-            planTurnoverSecondMonth,
-            planTurnoverThirdMonth
+                avgTurnoverPrevPeriodActualMonth,
+                avgTurnoverPrevPeriodFirstMonth,
+                avgTurnoverPrevPeriodSecondMonth,
+                avgTurnoverPrevPeriodThirdMonth,
+                avgTurnoverCurrentPeriodActualMonth,
+                dynTurnoverFirstToActualMonth,
+                dynTurnoverSecondToFirstMonth,
+                dynTurnoverThirdToSecondMonth,
+                planAvgTurnoverFirstMonth,
+                planAvgTurnoverSecondMonth,
+                planAvgTurnoverThirdMonth,
+                planTurnoverFirstMonth,
+                planTurnoverSecondMonth,
+                planTurnoverThirdMonth
         );
     }
 
+    @Override
     public Set<Integer> getMarginColumnIndices() {
         return Set.of(
                 avgMarginPrevPeriodActualMonth,
@@ -73,6 +75,79 @@ public record DataSheetColumnIndices(
                 planMarginFirstMonth,
                 planMarginSecondMonth,
                 planMarginThirdMonth
+        );
+    }
+
+    @Override
+    public int getCategoryOrStoreColumnIndex() {
+        return category;
+    }
+
+    @Override
+    public int getPlanTurnoverFirstMonthColumnIndex() {
+        return planTurnoverFirstMonth;
+    }
+
+    @Override
+    public int getPlanMarginFirstMonthColumnIndex() {
+        return planMarginFirstMonth;
+    }
+
+    @Override
+    public int getPlanTurnoverSecondMonthColumnIndex() {
+        return planTurnoverSecondMonth;
+    }
+
+    @Override
+    public int getPlanMarginSecondMonthColumnIndex() {
+        return planMarginSecondMonth;
+    }
+
+    @Override
+    public int getPlanTurnoverThirdMonthColumnIndex() {
+        return planTurnoverThirdMonth;
+    }
+
+    @Override
+    public int getPlanMarginThirdMonthColumnIndex() {
+        return planMarginThirdMonth;
+    }
+
+    public Set<Integer> getNumberFormatIndices() {
+        return Set.of(
+                avgTurnoverPrevPeriodActualMonth,
+                avgTurnoverPrevPeriodFirstMonth,
+                avgTurnoverPrevPeriodSecondMonth,
+                avgTurnoverPrevPeriodThirdMonth,
+                avgTurnoverCurrentPeriodActualMonth,
+                planAvgTurnoverFirstMonth,
+                planAvgTurnoverSecondMonth,
+                planAvgTurnoverThirdMonth,
+                planTurnoverFirstMonth,
+                planTurnoverSecondMonth,
+                planTurnoverThirdMonth,
+                avgMarginPrevPeriodActualMonth,
+                avgMarginPrevPeriodFirstMonth,
+                avgMarginPrevPeriodSecondMonth,
+                avgMarginPrevPeriodThirdMonth,
+                avgMarginCurrentPeriodActualMonth,
+                planAvgMarginFirstMonth,
+                planAvgMarginSecondMonth,
+                planAvgMarginThirdMonth,
+                planMarginFirstMonth,
+                planMarginSecondMonth,
+                planMarginThirdMonth
+        );
+    }
+
+    public Set<Integer> getPercentageFormatIndices() {
+        return Set.of(
+                dynTurnoverFirstToActualMonth,
+                dynTurnoverSecondToFirstMonth,
+                dynTurnoverThirdToSecondMonth,
+                dynMarginFirstToActualMonth,
+                dynMarginSecondToFirstMonth,
+                dynMarginThirdToSecondMonth
         );
     }
 }

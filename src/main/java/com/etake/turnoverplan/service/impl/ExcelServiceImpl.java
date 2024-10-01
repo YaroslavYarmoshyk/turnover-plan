@@ -10,6 +10,7 @@ import com.etake.turnoverplan.model.RegionOrder;
 import com.etake.turnoverplan.model.RegionRowInfo;
 import com.etake.turnoverplan.model.StoreCategorySales;
 import com.etake.turnoverplan.repository.RegionRepository;
+import com.etake.turnoverplan.service.ExcelFormatService;
 import com.etake.turnoverplan.service.ExcelService;
 import com.etake.turnoverplan.service.PeriodProvider;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +39,10 @@ import java.util.stream.Collectors;
 import static com.etake.turnoverplan.utils.Constants.CATEGORY;
 import static com.etake.turnoverplan.utils.Constants.CATEGORY_SHEET_NAME;
 import static com.etake.turnoverplan.utils.Constants.DATA_SHEET_NAME;
+import static com.etake.turnoverplan.utils.Constants.FIRST_ROW_INDEX;
+import static com.etake.turnoverplan.utils.Constants.INITIAL_VALUE_ROW_INDEX;
 import static com.etake.turnoverplan.utils.Constants.MARGIN_COLUMN_NAME;
+import static com.etake.turnoverplan.utils.Constants.SECOND_ROW_INDEX;
 import static com.etake.turnoverplan.utils.Constants.SIMILAR_STORE;
 import static com.etake.turnoverplan.utils.Constants.STORE;
 import static com.etake.turnoverplan.utils.Constants.STORES_SHEET_NAME;
@@ -65,12 +69,10 @@ import static java.util.stream.Collectors.toSet;
 @Service
 @RequiredArgsConstructor
 public class ExcelServiceImpl implements ExcelService {
-    private static final Integer FIRST_ROW_INDEX = 0;
-    private static final Integer SECOND_ROW_INDEX = 1;
-    private static final Integer INITIAL_VALUE_ROW_INDEX = 2;
     private final RegionRepository repository;
     private final PeriodProvider periodProvider;
     private final ColumnIndices columnIndices;
+    private final ExcelFormatService excelFormatService;
 
     @Override
     public Workbook getWorkbook(final Collection<StoreCategorySales> sales) {
@@ -80,6 +82,8 @@ public class ExcelServiceImpl implements ExcelService {
         final Sheet dataSheet = getDataSheet(workbook, prevQuarter, plannedQuarter, sales);
         final Sheet categoriesPlan = getCategoriesSheet(workbook, plannedQuarter, sales);
         final Sheet storesPlan = createStoresSheet(workbook, plannedQuarter, sales);
+
+        excelFormatService.formatDataSheet(workbook, dataSheet);
 
         return workbook;
     }

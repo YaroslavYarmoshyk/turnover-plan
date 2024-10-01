@@ -14,4 +14,7 @@ public final class Constants {
     public static final String TOTAL = "Разом";
     public static final String TURNOVER_COLUMN_NAME = "ТО";
     public static final String MARGIN_COLUMN_NAME = "Маржа";
+    public static final Integer FIRST_ROW_INDEX = 0;
+    public static final Integer SECOND_ROW_INDEX = 1;
+    public static final Integer INITIAL_VALUE_ROW_INDEX = 2;
 }
