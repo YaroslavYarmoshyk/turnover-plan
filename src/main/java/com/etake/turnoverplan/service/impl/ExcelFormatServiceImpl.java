@@ -10,6 +10,7 @@ import org.apache.poi.ss.usermodel.Color;
 import org.apache.poi.ss.usermodel.DataFormat;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
@@ -22,19 +23,18 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.IntStream;
 
 import static com.etake.turnoverplan.utils.Constants.FIRST_ROW_INDEX;
 import static com.etake.turnoverplan.utils.Constants.INITIAL_VALUE_ROW_INDEX;
 import static com.etake.turnoverplan.utils.Constants.SECOND_ROW_INDEX;
 import static com.etake.turnoverplan.utils.ExcelUtils.applyCellStyle;
+import static com.etake.turnoverplan.utils.ExcelUtils.autosizeColumns;
 
 @Service
 @RequiredArgsConstructor
 public class ExcelFormatServiceImpl implements ExcelFormatService {
     private static final XSSFColor GREY_COLOR = new XSSFColor(new byte[]{(byte) 38, (byte) 38, (byte) 38}, new DefaultIndexedColorMap());
     private static final XSSFColor LIGHT_GREY_COLOR = new XSSFColor(new byte[]{(byte) 64, (byte) 64, (byte) 64}, new DefaultIndexedColorMap());
-    private static final int DEFAULT_NUMBER_WIDTH = 9 * 256;
     private final ColumnIndices columnIndices;
 
     @Override
@@ -57,15 +57,16 @@ public class ExcelFormatServiceImpl implements ExcelFormatService {
         numberFormatIndices.forEach(i -> applyCellStyle(sheet, numberCellStyle, INITIAL_VALUE_ROW_INDEX, i, endRowIndex, i));
         columnIndices.dataSheet().getPercentageFormatIndices().forEach(i -> applyCellStyle(sheet, percentageCellStyle, INITIAL_VALUE_ROW_INDEX, i, endRowIndex, i));
 
-        IntStream.rangeClosed(startColumnIndex, endColumnIndex)
-                .forEach(i -> sheet.autoSizeColumn(i, true));
-        numberFormatIndices.forEach(i -> sheet.setColumnWidth(i, DEFAULT_NUMBER_WIDTH));
+        final FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
+        autosizeColumns(sheet, evaluator);
     }
 
     private static void formatHeaders(final Workbook workbook, final Sheet sheet, final ResultSheetColumnIndices resultSheetColumnIndices) {
         final Row firstRow = sheet.getRow(FIRST_ROW_INDEX);
+        final short defaultHeight = firstRow.getHeight();
+        firstRow.setHeight((short) (defaultHeight * 2));
         final Row secondRow = sheet.getRow(SECOND_ROW_INDEX);
-
+        secondRow.setHeight(defaultHeight);
         final CellStyle greyHeaderCellStyle = getHeaderCellStyle(workbook, GREY_COLOR);
         firstRow.cellIterator().forEachRemaining(cell -> cell.setCellStyle(greyHeaderCellStyle));
 
@@ -99,6 +100,7 @@ public class ExcelFormatServiceImpl implements ExcelFormatService {
         cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
         cellStyle.setAlignment(HorizontalAlignment.CENTER);
+        cellStyle.setWrapText(true);
         return cellStyle;
     }
 

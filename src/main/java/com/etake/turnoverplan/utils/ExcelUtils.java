@@ -7,6 +7,7 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.DataFormat;
 import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -14,6 +15,8 @@ import org.apache.poi.ss.usermodel.Workbook;
 
 import java.math.BigDecimal;
 
+import static com.etake.turnoverplan.utils.CalculationUtils.DEFAULT_ROUNDING_MODE;
+import static com.etake.turnoverplan.utils.CalculationUtils.DEFAULT_SCALE;
 import static java.util.Objects.nonNull;
 
 @NoArgsConstructor(access = AccessLevel.NONE)
@@ -141,5 +144,44 @@ public final class ExcelUtils {
                 ExcelUtils.applyCellStyle(sheet, cellStyle, i, j);
             }
         }
+    }
+
+    public static void autosizeColumns(final Sheet sheet, final FormulaEvaluator evaluator) {
+        final int startRow = sheet.getTopRow();
+        final int startColumn = sheet.getRow(startRow).getFirstCellNum();
+        final int endRow = sheet.getLastRowNum() - 1;
+        final int endColumn = sheet.getRow(endRow).getLastCellNum() - 1;
+
+        for (int i = startColumn; i <= endColumn; i++) {
+            int maxLength = 0;
+            for (int j = startRow + 1; j <= endRow; j++) {
+                final Cell cell = sheet.getRow(j).getCell(i);
+                if (cell.isPartOfArrayFormulaGroup()) {
+                    continue;
+                }
+                final int currentLength = getCellValueLength(evaluator, cell);
+                if (currentLength > maxLength) {
+                    maxLength = currentLength;
+                }
+            }
+            sheet.setColumnWidth(i, (maxLength + 2) * 255);
+        }
+    }
+
+    private static int getCellValueLength(final FormulaEvaluator evaluator, final Cell cell) {
+        return  switch (cell.getCellType()) {
+            case STRING -> cell.getStringCellValue().length();
+            case NUMERIC -> String.valueOf(cell.getNumericCellValue()).length();
+            case BOOLEAN -> String.valueOf(cell.getBooleanCellValue()).length();
+            case FORMULA -> getFormulaResultNumberLength(evaluator, cell);
+            case BLANK -> 0;
+            default -> throw new IllegalStateException("Cannot get length from cell value");
+        };
+    }
+
+    private static int getFormulaResultNumberLength(final FormulaEvaluator evaluator, final Cell cell) {
+        final BigDecimal bigDecimal = BigDecimal.valueOf(evaluator.evaluate(cell).getNumberValue())
+                .setScale(DEFAULT_SCALE, DEFAULT_ROUNDING_MODE);
+        return String.valueOf(bigDecimal.doubleValue()).length();
     }
 }
