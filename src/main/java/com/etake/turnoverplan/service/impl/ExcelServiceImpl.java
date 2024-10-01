@@ -69,7 +69,7 @@ import static java.util.stream.Collectors.toSet;
 @Service
 @RequiredArgsConstructor
 public class ExcelServiceImpl implements ExcelService {
-    private final RegionRepository repository;
+    private final RegionRepository regionRepository;
     private final PeriodProvider periodProvider;
     private final ColumnIndices columnIndices;
     private final ExcelFormatService excelFormatService;
@@ -79,11 +79,17 @@ public class ExcelServiceImpl implements ExcelService {
         final Workbook workbook = new XSSFWorkbook();
         final Quarter prevQuarter = periodProvider.getPrevQuarter();
         final Quarter plannedQuarter = periodProvider.getPlannedQuarter();
-        final Sheet dataSheet = getDataSheet(workbook, prevQuarter, plannedQuarter, sales);
+        final Sheet data = getDataSheet(workbook, prevQuarter, plannedQuarter, sales);
         final Sheet categoriesPlan = getCategoriesSheet(workbook, plannedQuarter, sales);
         final Sheet storesPlan = createStoresSheet(workbook, plannedQuarter, sales);
 
-        excelFormatService.formatDataSheet(workbook, dataSheet);
+//        final List<String> regions = regionRepository.findAllRegionOrders().stream()
+        final List<String> regions = getRegionOrders().stream()
+                .map(RegionOrder::name)
+                .toList();
+        excelFormatService.formatDataSheet(workbook, data);
+        excelFormatService.formatCategoriesSheet(workbook, categoriesPlan);
+        excelFormatService.formatStoresSheet(workbook, storesPlan, regions);
 
         return workbook;
     }

@@ -17,4 +17,6 @@ public final class Constants {
     public static final Integer FIRST_ROW_INDEX = 0;
     public static final Integer SECOND_ROW_INDEX = 1;
     public static final Integer INITIAL_VALUE_ROW_INDEX = 2;
+    public static final Integer FIRST_COLUMN_NUMBER = 1;
+    public static final Integer DATA_SHEET_FREEZE_COLUMN_NUMBER = 3;
 }

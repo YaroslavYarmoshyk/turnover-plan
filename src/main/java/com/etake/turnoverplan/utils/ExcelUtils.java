@@ -146,7 +146,8 @@ public final class ExcelUtils {
         }
     }
 
-    public static void autosizeColumns(final Sheet sheet, final FormulaEvaluator evaluator) {
+    public static void autosizeColumns(final Workbook workbook, final Sheet sheet) {
+        final FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
         final int startRow = sheet.getTopRow();
         final int startColumn = sheet.getRow(startRow).getFirstCellNum();
         final int endRow = sheet.getLastRowNum() - 1;
