@@ -42,7 +42,7 @@ public class ExcelFormatServiceImpl implements ExcelFormatService {
     private static final XSSFColor LIGHT_GREY_COLOR = new XSSFColor(new byte[]{(byte) 64, (byte) 64, (byte) 64}, new DefaultIndexedColorMap());
     private static final XSSFColor LIGHT_GREEN_COLOR = new XSSFColor(new byte[]{(byte) 218, (byte) 242, (byte) 208}, new DefaultIndexedColorMap());
     private static final String DEFAULT_FONT = "Aptos Narrow";
-    private static final String DEFAULT_NUMBER_FORMAT = "_-* # ##0_-;-* # ##0_-;_-* \"-\"??_-;_-@_-";
+    private static final String DEFAULT_NUMBER_FORMAT = "# ### ##0;-# ### ##0;-";
     private static final String DEFAULT_PERCENTAGE_FORMAT = "0.0%";
     private final ColumnIndices columnIndices;
 
@@ -64,7 +64,7 @@ public class ExcelFormatServiceImpl implements ExcelFormatService {
 
         sheet.createFreezePane(DATA_SHEET_FREEZE_COLUMN_NUMBER, INITIAL_VALUE_ROW_INDEX);
 
-        autosizeColumns(workbook, sheet);
+        autosizeColumns(sheet);
     }
 
     @Override
@@ -77,7 +77,7 @@ public class ExcelFormatServiceImpl implements ExcelFormatService {
 
         sheet.createFreezePane(FIRST_COLUMN_NUMBER, INITIAL_VALUE_ROW_INDEX);
 
-        autosizeColumns(workbook, sheet);
+        autosizeColumns(sheet);
     }
 
     @Override
@@ -96,7 +96,7 @@ public class ExcelFormatServiceImpl implements ExcelFormatService {
 
         sheet.createFreezePane(FIRST_COLUMN_NUMBER, INITIAL_VALUE_ROW_INDEX);
 
-        autosizeColumns(workbook, sheet);
+        autosizeColumns(sheet);
         sheet.setColumnWidth(storesSheetColumnIndices.adjustedPlanTurnoverFirstMonth(), sheet.getColumnWidth(storesSheetColumnIndices.adjustedPlanMarginFirstMonth()));
     }
 
@@ -138,6 +138,7 @@ public class ExcelFormatServiceImpl implements ExcelFormatService {
         final CellStyle adjustedValuesCellStyle = getDefaultCellStyle(workbook);
         adjustedValuesCellStyle.setFillForegroundColor(LIGHT_GREEN_COLOR);
         adjustedValuesCellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        adjustedValuesCellStyle.setDataFormat(dataFormat);
         formatValueRange(sheet, defaultCellStyle);
         applyCellStyle(sheet, adjustedValuesCellStyle, INITIAL_VALUE_ROW_INDEX, fromAdjustedColumnIndex, sheet.getLastRowNum(), toAdjustedColumnIndex);
     }
@@ -148,7 +149,7 @@ public class ExcelFormatServiceImpl implements ExcelFormatService {
                 .filter(i -> regions.contains(sheet.getRow(i).getCell(firstCellIndex).getStringCellValue()))
                 .boxed()
                 .collect(Collectors.toSet());
-        final CellStyle cellStyle = getHeaderCellStyle(workbook, LIGHT_GREY_COLOR);
+        final CellStyle cellStyle = getHeaderCellStyleWithoutAlignment(workbook, LIGHT_GREY_COLOR);
         cellStyle.setDataFormat(dataFormat);
 
         for (final Integer index : regionRowIndices) {
@@ -170,20 +171,20 @@ public class ExcelFormatServiceImpl implements ExcelFormatService {
         applyCellStyle(sheet, defaultCellStyle, INITIAL_VALUE_ROW_INDEX, startColumnIndex, endRowIndex, endColumnIndex);
     }
 
-
     private static CellStyle getHeaderCellStyle(final Workbook workbook,
                                                 final Color backgroundColor) {
-        final CellStyle cellStyle = getDefaultHeaderCellStyle(workbook);
-        cellStyle.setFillForegroundColor(backgroundColor);
-        cellStyle.setFont(getFontByColor(workbook, IndexedColors.WHITE));
+        final CellStyle cellStyle = getHeaderCellStyleWithoutAlignment(workbook, backgroundColor);
+        cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        cellStyle.setAlignment(HorizontalAlignment.CENTER);
         return cellStyle;
     }
 
-    private static CellStyle getDefaultHeaderCellStyle(final Workbook workbook) {
+    private static CellStyle getHeaderCellStyleWithoutAlignment(final Workbook workbook,
+                                                                final Color backgroundColor) {
         final CellStyle cellStyle = getDefaultCellStyle(workbook);
         cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-        cellStyle.setAlignment(HorizontalAlignment.CENTER);
+        cellStyle.setFillForegroundColor(backgroundColor);
+        cellStyle.setFont(getFontByColor(workbook, IndexedColors.WHITE));
         cellStyle.setWrapText(true);
         return cellStyle;
     }

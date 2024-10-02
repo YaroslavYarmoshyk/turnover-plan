@@ -3,6 +3,8 @@ package com.etake.turnoverplan.utils;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
+import java.util.Map;
+
 @NoArgsConstructor(access = AccessLevel.NONE)
 public final class Constants {
     public static final String DATA_SHEET_NAME = "data";
@@ -19,4 +21,13 @@ public final class Constants {
     public static final Integer INITIAL_VALUE_ROW_INDEX = 2;
     public static final Integer FIRST_COLUMN_NUMBER = 1;
     public static final Integer DATA_SHEET_FREEZE_COLUMN_NUMBER = 3;
+    public static final Integer DEFAULT_COLUMN_WIDTH = 5;
+
+    public static final Map<String, Integer> COLUMN_WIDTH = Map.of(
+            STORE, 22,
+            SIMILAR_STORE, 22,
+            CATEGORY, 31,
+            TURNOVER_COLUMN_NAME, 12,
+            MARGIN_COLUMN_NAME, 12
+    );
 }

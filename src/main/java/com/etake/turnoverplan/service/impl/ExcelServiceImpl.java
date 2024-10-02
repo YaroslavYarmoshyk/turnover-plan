@@ -59,7 +59,6 @@ import static com.etake.turnoverplan.utils.ExcelFormulaUtils.setFormula;
 import static com.etake.turnoverplan.utils.ExcelUtils.applyCellStyle;
 import static com.etake.turnoverplan.utils.ExcelUtils.createCells;
 import static com.etake.turnoverplan.utils.ExcelUtils.setValue;
-import static com.etake.turnoverplan.utils.TestData.getRegionOrders;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
@@ -79,12 +78,12 @@ public class ExcelServiceImpl implements ExcelService {
         final Workbook workbook = new XSSFWorkbook();
         final Quarter prevQuarter = periodProvider.getPrevQuarter();
         final Quarter plannedQuarter = periodProvider.getPlannedQuarter();
+        final List<RegionOrder> regionOrders = regionRepository.findAllRegionOrders();
+
         final Sheet data = getDataSheet(workbook, prevQuarter, plannedQuarter, sales);
         final Sheet categoriesPlan = getCategoriesSheet(workbook, plannedQuarter, sales);
-        final Sheet storesPlan = createStoresSheet(workbook, plannedQuarter, sales);
-
-//        final List<String> regions = regionRepository.findAllRegionOrders().stream()
-        final List<String> regions = getRegionOrders().stream()
+        final Sheet storesPlan = createStoresSheet(workbook, plannedQuarter, sales, regionOrders);
+        final List<String> regions = regionOrders.stream()
                 .map(RegionOrder::name)
                 .toList();
         excelFormatService.formatDataSheet(workbook, data);
@@ -96,7 +95,9 @@ public class ExcelServiceImpl implements ExcelService {
 
     @Override
     public void writeWorkbook(final Workbook workbook, final String path) throws Exception {
-        final FileOutputStream outputStream = new FileOutputStream(path);
+        final String fileName = resolveFileName(periodProvider.getPlannedQuarter());
+        final String fullPath = String.format("%s%s", path, fileName);
+        final FileOutputStream outputStream = new FileOutputStream(fullPath);
         workbook.write(outputStream);
         workbook.close();
     }
@@ -344,15 +345,10 @@ public class ExcelServiceImpl implements ExcelService {
     }
 
     public Sheet createStoresSheet(final Workbook workbook, final Quarter plannedQuarter,
-                                   final Collection<StoreCategorySales> sales) {
+                                   final Collection<StoreCategorySales> sales, final List<RegionOrder> regionOrders) {
         final StoresSheetColumnIndices storesIndices = columnIndices.storesSheet();
         final Sheet storesSheet = workbook.createSheet(STORES_SHEET_NAME);
-//        final Map<String, Integer> regionOrder = repository.findAllRegionOrders().stream()
-//                .collect(toMap(
-//                        RegionOrder::name,
-//                        RegionOrder::sortOrder
-//                ));
-        final Map<String, Integer> regionOrder = getRegionOrders().stream()
+        final Map<String, Integer> regionOrder = regionOrders.stream()
                 .collect(toMap(
                         RegionOrder::name,
                         RegionOrder::sortOrder
@@ -517,5 +513,14 @@ public class ExcelServiceImpl implements ExcelService {
 
         turnoverColumnIndices.forEach(i -> secondRow.getCell(i).setCellValue(TURNOVER_COLUMN_NAME));
         marginColumnIndices.forEach(i -> secondRow.getCell(i).setCellValue(MARGIN_COLUMN_NAME));
+    }
+
+    private static String resolveFileName(final Quarter plannedQuarter) {
+        return String.format(
+                "Квартальний план (%s__%s__%s).xlsx",
+                plannedQuarter.firstMonthName(),
+                plannedQuarter.secondMonth(),
+                plannedQuarter.thirdMonthName()
+        );
     }
 }
