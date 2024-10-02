@@ -90,6 +90,7 @@ public class ExcelServiceImpl implements ExcelService {
         excelFormatService.formatCategoriesSheet(workbook, categoriesPlan);
         excelFormatService.formatStoresSheet(workbook, storesPlan, regions);
 
+        workbook.setActiveSheet(workbook.getSheetIndex(STORES_SHEET_NAME));
         return workbook;
     }
 
