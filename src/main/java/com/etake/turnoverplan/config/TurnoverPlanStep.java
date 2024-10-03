@@ -6,6 +6,8 @@ import com.etake.turnoverplan.service.StoreCategoryService;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.springframework.batch.core.BatchStatus;
+import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.stereotype.Component;
@@ -28,6 +30,8 @@ public class TurnoverPlanStep implements Step {
         try {
             final Workbook workbook = excelService.getWorkbook(storeCategoryService.getSales());
             excelService.writeWorkbook(workbook, systemConfigurationProperties.filePath());
+            stepExecution.setStatus(BatchStatus.COMPLETED);
+            stepExecution.setExitStatus(ExitStatus.COMPLETED);
         } catch (Exception e) {
             throw new IllegalStateException("Cannot write the workbook");
         }
