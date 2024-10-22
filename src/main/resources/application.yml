@@ -6,7 +6,7 @@ spring:
 
 system-configuration:
   planned-year: 2024
-  planned-month: 10
+  planned-month: 11
   file-path: C:\\Users\\Ya.Yarmoshyk\\Desktop\\
   column-indices:
     data-sheet:
